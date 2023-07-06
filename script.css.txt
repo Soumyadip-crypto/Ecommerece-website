@@ -1,82 +1,118 @@
-const API_URL = 'https://crudcrud.com/api/e5baa7edff4d4c95a6eabaa12aee488f/products';
 
-const form = document.getElementById('productForm');
-const productList = document.getElementById('productList');
+function handleFormSubmit() {
 
-// Function to fetch products from the API
-function fetchProducts() {
-  fetch(API_URL)
+    var sellingPrice = document.getElementById('sellingprice').value;
+    var productName = document.getElementById('productname').value;
+    var category = document.getElementById('category').value;
+  
+
+    var product = {
+      sellingPrice: sellingPrice,
+      productName: productName
+    };
+  
+    // POST request 
+    fetch('https://crudcrud.com/api/285efe9bb6b7439ab7e92fe65cd700c4/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(product)
+    })
     .then(response => response.json())
     .then(data => {
-      productList.innerHTML = '';
+      var storedProducts = JSON.parse(localStorage.getItem(category)) || [];
+      storedProducts.push(data);
+      localStorage.setItem(category, JSON.stringify(storedProducts));
+  
 
-      data.forEach(product => {
-        const listItem = createProductListItem(product);
-        productList.appendChild(listItem);
+      var containerId = category.toLowerCase() + 'Container';
+      var container = document.getElementById(containerId);
+      var productElement = document.createElement('div');
+      productElement.className = 'product';
+  
+      var productNameElement = document.createElement('p');
+      productNameElement.textContent = productName + ' - ' + sellingPrice;
+  
+      var deleteButton = document.createElement('button');
+      deleteButton.textContent = 'Delete';
+      deleteButton.addEventListener('click', function() {
+
+        fetch('https://crudcrud.com/api/285efe9bb6b7439ab7e92fe65cd700c4/products/' + data._id, {
+          method: 'DELETE'
+        })
+        .then(() => {
+
+          productElement.remove();
+  
+
+          var storedProducts = JSON.parse(localStorage.getItem(category)) || [];
+          var updatedProducts = storedProducts.filter(function(item) {
+            return item._id !== data._id;
+          });
+          localStorage.setItem(category, JSON.stringify(updatedProducts));
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
       });
+  
+      productElement.appendChild(productNameElement);
+      productElement.appendChild(deleteButton);
+      container.appendChild(productElement);
     })
-    .catch(error => console.error('Error fetching products:', error));
-}
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+  
 
-// Function to create a new product list item
-function createProductListItem(product) {
-  const listItem = document.createElement('li');
-  listItem.textContent = `${product.sellingPrice} - ${product.category} - ${product.productName}`;
+  function loadStoredProducts() {
+    var categories = ['Electronics', 'Food', 'Skincare'];
+    categories.forEach(function(category) {
+      var storedProducts = JSON.parse(localStorage.getItem(category)) || [];
+      var containerId = category.toLowerCase() + 'Container';
+      var container = document.getElementById(containerId);
+      storedProducts.forEach(function(product) {
+        var productElement = document.createElement('div');
+        productElement.className = 'product';
+  
+        var productNameElement = document.createElement('p');
+        productNameElement.textContent = product.productName + ' - ' + product.sellingPrice;
+  
+        var deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', function() {
+     
+          fetch('https://crudcrud.com/api/285efe9bb6b7439ab7e92fe65cd700c4/products/' + product._id, {
+            method: 'DELETE'
+          })
+          .then(() => {
 
-  const deleteButton = document.createElement('button');
-  deleteButton.textContent = 'Delete';
-  deleteButton.addEventListener('click', () => {
-    deleteProduct(product._id);
-  });
+            productElement.remove();
 
-  listItem.appendChild(deleteButton);
+            var storedProducts = JSON.parse(localStorage.getItem(category)) || [];
+            var updatedProducts = storedProducts.filter(function(item) {
+              return item._id !== product._id;
+            });
+            localStorage.setItem(category, JSON.stringify(updatedProducts));
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
+        });
+  
+        productElement.appendChild(productNameElement);
+        productElement.appendChild(deleteButton);
+        container.appendChild(productElement);
+      });
+    });
+  }
+  
+  
+  var addButton = document.getElementById('addButton');
+  addButton.addEventListener('click', handleFormSubmit);
+  
 
-  return listItem;
-}
-
-// Function to add a new product
-function addProduct(sellingPrice, productName, category) {
-  fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      sellingPrice,
-      productName,
-      category
-    })
-  })
-    .then(response => response.json())
-    .then(product => {
-      const listItem = createProductListItem(product);
-      productList.appendChild(listItem);
-    })
-    .catch(error => console.error('Error adding product:', error));
-}
-
-// Function to delete a product
-function deleteProduct(productId) {
-  fetch(`${API_URL}/${productId}`, {
-    method: 'DELETE'
-  })
-    .then(() => {
-      fetchProducts();
-    })
-    .catch(error => console.error('Error deleting product:', error));
-}
-
-// Event listener for form submission
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
-
-  const sellingPrice = document.getElementById('sellingPrice').value;
-  const productName = document.getElementById('productName').value;
-  const category = document.getElementById('category').value;
-
-  addProduct(sellingPrice, productName, category);
-  form.reset();
-});
-
-// Fetch products on page load
-fetchProducts();
+  loadStoredProducts();
+  
